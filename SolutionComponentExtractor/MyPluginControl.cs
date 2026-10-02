@@ -245,6 +245,17 @@ namespace SolutionComponentExtractor
         private void tsbShowLog_CheckedChanged(object sender, EventArgs e)
         {
             pnlLog.Visible = tsbShowLog.Checked;
+            KeepFooterAtBottom();
+        }
+
+        /// <summary>
+        /// The footer and the Activity panel are both docked at the bottom and shown at different times;
+        /// WinForms can then lay the Activity panel out below the footer. Docking the footer first keeps it at the very bottom.
+        /// </summary>
+        private void KeepFooterAtBottom()
+        {
+            pnlFooter.SendToBack();
+            PerformLayout();
         }
 
         private void Log(LogLevel level, string message)
@@ -364,6 +375,7 @@ namespace SolutionComponentExtractor
             pnlEmpty.Visible = !hasPackage;
             pnlContent.Visible = hasPackage;
             pnlFooter.Visible = hasPackage;
+            KeepFooterAtBottom();
             foreach (var item in new ToolStripItem[] { tsbKeepAll, tsbKeepNone, tsbGenerate, tsbImport }) item.Enabled = hasPackage;
 
             ClearPreview();

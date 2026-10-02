@@ -46,6 +46,8 @@ namespace SolutionComponentExtractor.UI
             private const int MaxContentHeightAt96Dpi = 460;
             private readonly string copyText;
             private readonly float scale;
+            private readonly FlowLayoutPanel text;
+            private readonly int maxContentHeight;
 
             public ModernDialogForm(DialogKind kind, string title, string message, List<string> items, List<DialogSection> sections, string primary, string secondary)
             {
@@ -106,7 +108,7 @@ namespace SolutionComponentExtractor.UI
                 body.Controls.Add(badge, 0, 0);
 
                 var textWidth = S(WidthAt96Dpi) - S(24) * 2 - S(60) - S(20);
-                var text = new FlowLayoutPanel
+                text = new FlowLayoutPanel
                 {
                     Dock = DockStyle.Fill,
                     FlowDirection = FlowDirection.TopDown,
@@ -128,10 +130,12 @@ namespace SolutionComponentExtractor.UI
                 surface.Controls.Add(strip);
                 body.BringToFront();
 
-                // Height follows the content, up to a maximum (then the text scrolls).
+                // Height follows the content, up to a maximum (then the text scrolls). This first estimate
+                // is corrected in OnLoad, once the labels are laid out (see FitToContent).
                 var contentHeight = text.Controls.Cast<Control>().Sum(c => c.Height + c.Margin.Vertical);
                 var screenLimit = (int)(Screen.FromPoint(Cursor.Position).WorkingArea.Height * 0.7) - S(160);
-                var visibleHeight = Math.Min(Math.Max(contentHeight, S(48)), Math.Max(S(MaxContentHeightAt96Dpi), screenLimit));
+                maxContentHeight = Math.Max(S(MaxContentHeightAt96Dpi), screenLimit);
+                var visibleHeight = Math.Min(Math.Max(contentHeight, S(48)), maxContentHeight);
                 ClientSize = new Size(S(WidthAt96Dpi), 2 + strip.Height + body.Padding.Vertical + visibleHeight + footer.Height);
 
                 // Drag the dialog from anywhere but the buttons.
@@ -155,6 +159,28 @@ namespace SolutionComponentExtractor.UI
                     cp.ClassStyle |= CS_DROPSHADOW;
                     return cp;
                 }
+            }
+
+            protected override void OnLoad(EventArgs e)
+            {
+                base.OnLoad(e);
+                FitToContent();
+            }
+
+            /// <summary>Resizes the dialog to the real height of its text, keeping it centered on the same point.</summary>
+            private void FitToContent()
+            {
+                text.PerformLayout();
+                var last = text.Controls.Cast<Control>().LastOrDefault();
+                if (last == null) return;
+
+                var needed = last.Bottom - text.AutoScrollPosition.Y + last.Margin.Bottom;
+                var target = Math.Min(Math.Max(needed, S(48)), maxContentHeight);
+                var delta = target - text.ClientSize.Height;
+                if (delta == 0) return;
+
+                Height += delta;
+                Top -= delta / 2;
             }
 
             protected override void OnKeyDown(KeyEventArgs e)
